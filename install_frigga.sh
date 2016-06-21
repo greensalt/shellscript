@@ -14,7 +14,7 @@ HTTP_CONF="conf/frigga.yml"
 FRIGGA_CMD="/opt/ops/Frigga/bin/frigga.rb"
 FRIGGA_BIN_DIR=`dirname $FRIGGA_CMD`
 
-ADMIN="adminops"
+ADMIN="admin"
 PASSWD="123456"
 PORT="5555"
 
