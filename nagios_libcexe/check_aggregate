@@ -1,0 +1,85 @@
+#!/bin/bash
+# cp check_syncache
+# By xielifeng On 2015-09-25
+
+# By xielifeng On 2016-03-28
+# Log dir change
+
+#aggregate="/logs/supp_app/syncache/aggregate.log"
+aggregate="/logs/supp_app/synarea/aggregate.log"
+VAL_TIME=1200
+SYNDATA_ROW="0"
+HIDE_FILE="/tmp/.nagios_aggregate.tmp"
+#LOG_ERROR="End at time"
+LOG_ERROR="AreaAggregateStatisticsService is OK"
+
+user=`whoami`
+if [ $user != "nagios" ]
+then
+	echo "Please use \"nagios\""
+	exit 1
+fi
+
+[ ! -f $aggregate ] && echo "\"$aggregate\" is not exist." && exit 2
+
+DATE_H=`date +%H`
+DATE_M=`date +%M`
+
+if [ ${DATE_H} == "00" -a ${DATE_M} -lt 35 ]
+then
+        echo "Current time not check."
+        exit 0
+fi
+
+FILE_STEMP=`/usr/bin/stat $aggregate | awk 'NR==6{print $2,$3}'`
+MOD_TIME=`/bin/date -d "$FILE_STEMP" +%s`
+NOW_TIME=`/bin/date +%s`
+DIFF_TIME=$(($NOW_TIME-$MOD_TIME))
+if [ "$DIFF_TIME" -gt "$VAL_TIME" ]
+then
+	echo "$aggregate $VAL_TIME seconds no update,pls check!"
+	exit 2
+fi
+
+if [ ! -f $HIDE_FILE ]      
+then
+        echo "0" > $HIDE_FILE
+        SYNDATA_ROW="0"
+else
+        SYNDATA_ROW=`cat $HIDE_FILE`
+        [ -z $SYNDATA_ROW ] && SYNDATA_ROW="0"
+fi
+
+ALL_ROW=`wc -l $aggregate|awk '{print $1}'`
+
+if [ "$SYNDATA_ROW" -gt "$ALL_ROW" ]
+then
+        ERROR_FIND=`awk -v A_END="$ALL_ROW" -v A_BEG="$SYNDATA_ROW" 'NR<A_END' "$aggregate" |grep "$LOG_ERROR"`
+        echo "$ALL_ROW" > $HIDE_FILE
+        if [ -z "$ERROR_FIND" ]
+        then
+                echo "$aggregate didn't find this '$LOG_ERROR' keyword."
+                exit 2
+        else
+                echo "$aggregate is ok"
+                exit 0
+       fi
+
+elif [ "$SYNDATA_ROW" -lt "$ALL_ROW" ]
+then
+        ERROR_FIND=`awk -v A_END="$ALL_ROW" -v A_BEG="$SYNDATA_ROW" 'NR<A_END&&NR>=A_BEG' "$aggregate" |grep "$LOG_ERROR"`
+        echo "$ALL_ROW" > $HIDE_FILE
+        if [ -z "$ERROR_FIND" ]
+        then
+                echo "$aggregate didn't find this '$LOG_ERROR' keyword"
+                exit 2
+        else
+                echo "$aggregate is ok"
+                exit 0
+
+        fi
+else
+        echo "$aggregate is ok"
+        exit 0
+fi
+

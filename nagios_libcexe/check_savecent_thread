@@ -1,0 +1,141 @@
+#!/bin/bash
+#edit by xuyingwei
+#at 2013-09-20
+
+#Modify by xielifeng on 2015-09-06. Add time limit
+NOW_TIME_H=`date +%H`
+NOW_TIME_M=`date +%M`
+
+if [ $NOW_TIME_H -eq 00 -a $NOW_TIME_M -lt 30 ];then
+    echo "The point is not check."
+    exit 0
+fi
+
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+
+LOG_PATH="/logs/supp_app/"
+LOG_NAME="threadInfo.log"
+
+LOG_TMP="/tmp/.threadInfo.tmp.nagios"
+OK_TMP="/tmp/.ok_threadInfo.tmp.nagios"
+IPADDR=`/sbin/ifconfig |grep -w "addr"|awk -F ":" 'NR==1{print $2}'|cut -c 4-5`
+HELP="Help: check_savecent_thread -n [input ignore check savecenter_logfile_name or null ] -T [input update logfile time out] -c [input savecent_thread critical value]"
+
+if [ "$#" -eq 6 ]
+then
+        while getopts "h:n:T:c:" SC;
+        do
+                case $SC in
+                        h ) echo $HELP
+                            exit 1;;
+                        n ) SAVECENTER_NAME=$OPTARG;;
+                        T ) VAL_TIME=$OPTARG;;
+                        c ) CRIT_VAL=$OPTARG;;
+                        * ) echo $HELP
+                             exit 1;;
+                esac
+        done
+else
+        echo $HELP;
+        exit 3
+fi
+
+cat /dev/null > $LOG_TMP
+cat /dev/null > $OK_TMP
+
+NUM_CHK() {
+        NUM_CHECK="$1"
+        NUM_NAME="$2"
+        if [ -z "$NUM_CHECK" ]
+        then
+                echo "CRITICAL:check the integer: get the values is null" >> $LOG_TMP
+        fi
+        INTEGER=`echo "$NUM_CHECK" |sed 's/ ^*//g'|sed 's/ *$//g'`
+        if [[ $INTEGER =~ ^[0-9]+$ ]]
+        then
+                :
+        else
+                echo "CRITICAL: get '${NUM_NAME}' value not integer,pls check" >> $LOG_TMP
+        fi
+}
+TIME_CHK(){
+	  SAVE_CHK_LOG_FILE_NAME="$1"
+	  SAVE_LOG_FILE_PATH="$2"
+	  
+          if [ "$SAVECENTER_NAME" == "$SAVE_CHK_LOG_FILE_NAME" ]
+          then
+               :
+	  else
+                FILE_STEMP=`/usr/bin/stat $SAVE_LOG_FILE_PATH | awk 'NR==6{print $2,$3}'`
+                MOD_TIME=`/bin/date -d "$FILE_STEMP" +%s`
+                NOW_TIME=`/bin/date +%s`
+                DIFF_TIME=$(($NOW_TIME-$MOD_TIME))
+                NUM_CHK $DIFF_TIME "log update time"
+                NUM_CHK $VAL_TIME "log update time critical value"
+                if [ "$DIFF_TIME" -gt "$VAL_TIME" ]
+                then
+                        echo "CRITICAL: - $SAVE_LOG_FILE_PATH $VAL_TIME seconds no update,pls check!" >> $LOG_TMP
+                        #exit "$STATE_CRITICAL"
+                fi
+          fi
+}
+#find log
+PATH_ARRAY=`find $LOG_PATH -maxdepth 1 -name savecenter*`
+
+for SAVE_PATH in $PATH_ARRAY
+do
+
+	LOG_FILE="${SAVE_PATH}/${LOG_NAME}"
+	if [ ! -f "$LOG_FILE" ]
+	then
+		echo "CRITICAL: $LOG_FILE file not found..." >> $LOG_TMP
+		#exit "$STATE_CRITICAL"
+	fi
+
+	if [ ! -r "$LOG_FILE" ]
+	then
+		echo "CRITICAL:reading '$LOG_FILE' permission denied..." >> $LOG_TMP
+		#exit "$STATE_CRITICAL"
+	fi
+
+	if [ ! -s "$LOG_FILE" ]
+	then
+		echo "CRITICAL: $LOG_FILE is empty file..." >> $LOG_TMP
+		#exit "$STATE_CRITICAL"
+	fi
+	if [ $IPADDR -eq 30 -o $IPADDR -eq 23 ]
+	then
+		SC_THREAD=`tail -300 "$LOG_FILE" |grep 'thread' |awk '{print $4}'|cut -d "_" -f 4|sort|uniq |wc -l`
+	else
+		SC_THREAD=`tail -300 "$LOG_FILE" |grep 'thread' |awk -F '[][]' '{print $6}'|sort|uniq |wc -l`
+	fi
+
+	NUM_CHK "$SC_THREAD" "savecent_thread"
+	NUM_CHK "$CRIT_VAL" "savecent_critical"
+
+	SAVE_LOG_FILE=`echo $LOG_FILE|awk -F "/" '{print $4}'`
+	TIME_CHK $SAVE_LOG_FILE $LOG_FILE
+	
+	if [ "$SC_THREAD" -lt "$CRIT_VAL" ]
+	then
+		echo "CRITICAL:savecent_thread value is $SC_THREAD less than $CRIT_VAL,[ $LOG_FILE ]" >> $LOG_TMP
+		#exit "$STATE_CRITICAL"
+	else
+		echo "OK:savecent_thread ok,curr value is $SC_THREAD,[ $LOG_FILE ]" >> $OK_TMP
+	fi
+
+done
+
+ERROR_NUM=`cat $LOG_TMP | wc -l`
+
+if [ $ERROR_NUM -eq 0 ]
+then
+	cat $OK_TMP
+	exit "$STATE_OK"
+else
+	cat $LOG_TMP
+	exit "$STATE_CRITICAL"
+fi

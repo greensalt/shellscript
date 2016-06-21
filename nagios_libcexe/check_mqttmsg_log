@@ -1,0 +1,86 @@
+#!/bin/bash
+# Jira:http://jira.transwiseway.com/browse/ZJYW-12624
+# By xielifeng On 2015-12-27
+
+# Modify By xielifeng On 2016-01-13
+# Add "Need Two"
+
+# Modify By xielifeng On 2016-01-27
+# Add "Need Three"
+
+HOUR=`date +%H`
+MINUTE=`date +%M`
+
+if [ $HOUR -eq 00 -a $MINUTE -lt 10 ];then
+    echo "00:00:00 -- 00:10:00 not check."
+    exit 0
+fi
+
+LOG_ROOT_DIR="/opt/comm_app/bocs/log"
+YEAR="`date +%Y`"
+MOUNTH="`date +%m`"
+DAY="`date +%d`"
+LOG_NAME="mqttmsg.log"
+KEY="publish.*18610269319"
+PHONE=`echo $KEY|awk -F "*" '{print $2}'`
+KEY1="18610269319"
+KEY2="TYPE:0"
+KEY3="ERRO-POSCACHE"
+VAL="120"
+TIMES="15"
+
+LOG_DIR="$LOG_ROOT_DIR/$YEAR/$MOUNTH/$DAY"
+cd $LOG_DIR
+
+NEW_LOG_NAME=`ls -t ${LOG_NAME}.*|head -1`
+VALUE="`grep "$KEY" $NEW_LOG_NAME`"
+
+ALEER_CENTER=""
+
+## Need One: http://jira.transwiseway.com/browse/ZJYW-12624
+if [ -z "$VALUE" ];then
+    ALEER_CENTER="nopos:$PHONE;"
+fi
+
+## Need Two: http://jira.transwiseway.com/browse/ZJYW-12794
+
+TMP_DATA=`grep "$KEY1" $NEW_LOG_NAME|grep "$KEY2"|tail -1`
+if [ -z "$TMP_DATA" ];then
+    ALEER_CENTER="${ALEER_CENTER}delay:Null;"
+else
+    TMP_END_TIME=`echo "$TMP_DATA"|awk -F '.' '{print $1}'`
+    BEGIN_TIME=`echo "$TMP_DATA"|awk -F ":" '{print $NF}'|awk -F "}" '{print $1}'`
+    
+    # Year-Month-Day
+    Y=`echo $TMP_END_TIME|awk -F ":" '{print $1}'|cut -c 1-4`
+    MO=`echo $TMP_END_TIME|awk -F ":" '{print $1}'|cut -c 5-6`
+    D=`echo $TMP_END_TIME|awk -F ":" '{print $1}'|cut -c 7-8`
+    
+    # Hour:Minute:Second
+    H=`echo $TMP_END_TIME|awk -F ":" '{print $2}'|cut -c 1-2`
+    MI=`echo $TMP_END_TIME|awk -F ":" '{print $2}'|cut -c 3-4`
+    S=`echo $TMP_END_TIME|awk -F ":" '{print $2}'|cut -c 5-6`
+    
+    END_TIME=`date -d "$Y-$MO-$D $H:$MI:$S" +%s`
+    TIME_DIFF=$(($END_TIME-$BEGIN_TIME))
+    
+    if [ $TIME_DIFF -gt $VAL ];then
+        ALEER_CENTER="${ALEER_CENTER}delay:${TIME_DIFF}s;"
+    fi
+fi
+
+## Need Three: http://jira.transwiseway.com/browse/ZJYW-12936
+
+#KEY3_TIMES=`grep "$KEY3" $LOG_DIR/$NEW_LOG_NAME|wc -l`
+#if [ -n "$KEY3_TIMES" -a $KEY3_TIMES -ge $TIMES ];then
+#    ALEER_CENTER="${ALEER_CENTER}${KEY3}:${KEY3_TIMES}"
+#fi
+
+## Alert:
+if [ -z "$ALEER_CENTER" ];then
+    echo "$NEW_LOG_NAME is ok."
+    exit 0
+else
+    echo "$ALEER_CENTER"
+    exit 2
+fi

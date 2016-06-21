@@ -1,0 +1,40 @@
+#!/bin/bash
+# Jira: http://jira.transwiseway.com/browse/ZJYW-13659
+# By xielifeng On 2016-04-28
+
+KEY="InteractController.getOnlinCountRedis"
+PRO_NAME="tomcat_toolApi_8101"
+LOG_DIR="/opt/web_app/$PRO_NAME/logs/toolMobileApi"
+LOG_FILE="$LOG_DIR/error.log"
+COUNT_TMP_FILE="/tmp/${PRO_NAME}.tmp"
+
+[ ! -f "$COUNT_TMP_FILE" ] && echo 0 > $COUNT_TMP_FILE
+[ ! -f "$LOG_FILE" ] && echo "<$LOG_FILE> is not exist." && exit 2
+
+ALL_ROW=`wc -l $LOG_FILE|awk '{print $1}'`
+START_ROW=`cat $COUNT_TMP_FILE`
+
+check_return(){
+    AGR=$1
+    if [ -n "$AGR" ];then
+        echo $ALL_ROW > $COUNT_TMP_FILE
+        echo "Key($KEY) exists in ${LOG_FILE}."
+        exit 2
+    else
+        echo $ALL_ROW > $COUNT_TMP_FILE
+        echo "${LOG_FILE} is ok."
+        exit 0
+    fi
+}
+
+if [[ $START_ROW < $ALL_ROW ]];then
+    TAR=`awk -v S="$START_ROW" -v E="$ALL_ROW" 'NR>=S && NR<E' $LOG_FILE | grep "$KEY"`
+    check_return "$TAR"
+elif [[ $START_ROW > $ALL_ROW ]];then
+    START_ROW="0"
+    TAR=`awk -v S="$START_ROW" -v E="$ALL_ROW" 'NR>=S && NR<E' $LOG_FILE | grep "$KEY"`
+    check_return "$TAR"
+else
+    echo "<$LOG_FILE> is not update."
+    exit 0
+fi

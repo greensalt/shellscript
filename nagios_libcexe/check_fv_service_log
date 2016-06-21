@@ -1,0 +1,66 @@
+#!/bin/bash
+# Jira: http://jira.transwiseway.com/browse/ZJYW-12442
+# By xielifeng On 2015-12-28
+# ------------- Modify:
+# By xielifeng On 2016-02-16
+# Add 5munites test; Add one day test
+
+LOG='/opt/web_app/tomcat_fv_service_8083/logs/fvService/info.log'
+[ ! -f "$LOG" ] && echo "$LOG is not exist." && exit 2
+
+## 毫秒:
+MS="10000"
+## tail 最后多少行:
+TAIL_ROW="1000"
+## 超过多少次:
+M_TIMES="10"
+## 5分钟
+LIMIT_TIME=300
+
+KEY="Time costing of find-vehicle-solr"
+LOG_DATA_TIME=`tail -1 $LOG|awk -F"," '{print $1}'`
+END_DATA_TIME=`date -d "$LOG_DATA_TIME" +%s`
+NOW_TIME=`date +%s`
+
+## 一天：
+UPDATE_TIMEOUT="86400"
+
+## Check log update
+check_update(){
+    ## Get time diff
+    MODIFY_TIME_HUMAN="`stat $LOG | grep 'Modify'|cut -d " " -f 2-3|awk -F'.' '{print $1}'`"
+    MODIFY_TIME_SEC="`date -d "$MODIFY_TIME_HUMAN" +%s`"
+    DIFF_TIME=$(($NOW_TIME-$MODIFY_TIME_SEC))
+    if [ $DIFF_TIME -ge $UPDATE_TIMEOUT ];then
+        echo "$LOG for $DIFF_TIME seconds not updated."
+        exit 2
+    fi
+}
+
+## 如果当前时间大于日志数据时间5分钟，则不检测:
+if [[ $(($NOW_TIME-$END_DATA_TIME)) > $LIMIT_TIME ]];then
+    echo "5Munites is not data,and not check."
+    exit 0
+else
+    check_update
+fi
+
+## NUMS 获取的是"Time costing of find-vehicle-solr: [500]ms" 中的500这个值
+NUMS="`tail -n $TAIL_ROW $LOG|grep \"$KEY\"|awk -F\" - \" '{print $2}'|awk -F\",\" '{print $1}'|grep -Eo '\[.{1,8}\]'|sed 's/[^0-9.]//g'`"
+
+## ====== main:
+SUM=0
+for TIME in $NUMS
+do
+    if [ $TIME -gt $MS ];then
+        SUM=$(($SUM+1))
+    fi
+done
+
+if [ $SUM -gt $M_TIMES ];then
+    echo "The count of the Find-vehicle-solr-time-costing more than {$MS}ms already beyond {$M_TIMES} times, pay attention to this."
+    exit 2
+else
+    echo "The count of the Find-vehicle-solr-time-costing more than {$MS}ms already beyond {$SUM} times."
+    exit 0
+fi

@@ -1,0 +1,76 @@
+#!/bin/bash
+## Check key => $OLRM* in "StatisticsCenter.log" .
+
+# Modify By xielifeng On 2015.10.22 ,Del "$OLRM3"
+# http://jira.transwiseway.com/browse/ITXTZC-43
+
+# Modify By xielifeng On 2016-03-28 $DATE=06 ==> $DATE=07
+# http://jira.transwiseway.com/browse/ZJYW-13361
+
+DATE=`date +%H`
+OLRM="VehicleDayStatTask-end"
+OLRM1="VehicleAlarm"
+OLRM2="VehiclePositionInitTask end"
+OLRM3="Platform"
+LOG_NAME="/logs/supp_app/statisticscenter/StatisticsCenter.log"
+
+TMP_FILE="/tmp/.StatisticsCenter.log.tmp"
+/bin/true > $TMP_FILE
+
+
+if [ $DATE -eq 07 ]
+then
+   if [ ! -f $LOG_NAME ]
+   then
+           echo "$LOG_NAME is not exist."
+           exit 2
+   fi
+   SC_LOG_ON=`cat $LOG_NAME|grep "$OLRM"|wc -l`
+   SC_LOG_VE=`cat $LOG_NAME|grep "$OLRM1"|wc -l`
+   SC_LOG_VPIE=`grep "$OLRM3" $LOG_NAME | wc -l`
+   if [ $SC_LOG_ON -lt 1 ]
+   then
+           echo "$LOG_NAME key \"$OLRM\" is null." >> $TMP_FILE
+   fi
+
+   if [ $SC_LOG_VE -lt 1 ]
+   then
+           echo "$LOG_NAME key \"$OLRM1\" is null." >> $TMP_FILE
+   fi
+
+   if [ $SC_LOG_VPIE -lt 1 ]
+   then
+           echo "$LOG_NAME key \"$OLRM3\" is null." >> $TMP_FILE
+   fi
+
+   if [ -s $TMP_FILE ]
+   then
+       LOG_C=`cat $TMP_FILE`
+       echo "$LOG_C"
+       exit 2
+   else
+       echo "$LOG_NAME is ok.Keys \"$OLRM\" \"$OLRM1\" are exist."
+       exit 0
+   fi
+
+elif [ $DATE -eq 01 ]
+then
+   if [ ! -f $LOG_NAME ]
+   then
+           echo "$LOG_NAME not exist."
+           exit 2
+   fi
+
+   SC_LOG_PST=`grep "$OLRM2" $LOG_NAME | wc -l`
+   if [ $SC_LOG_PST -lt 1 ]
+   then
+       echo "$LOG_NAME '$OLRM2' is null." 
+       exit 2
+   else
+       echo "$LOG_NAME key \"$OLRM2\" is exist."
+       exit 0
+   fi
+else
+   echo "Current time not check."
+   exit 0
+fi

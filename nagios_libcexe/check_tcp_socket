@@ -1,0 +1,29 @@
+#!/bin/bash
+# Jira: http://jira.transwiseway.com/browse/ZJYW-13277
+# By xielifeng On 2016-03-11
+
+TCP_ALL_NUM="80000"
+TCP_ESTAB_NUM="60000"
+SS_CMD="/usr/sbin/ss"
+
+ESTAB_NUM=`$SS_CMD -t state established|wc -l`
+ALL_NUM=`$SS_CMD -t|wc -l`
+#PORT_1883_NUM=`$SS_CMD -t state established|grep ":1883\>"|wc -l`
+
+#if [ $# != 2 ];then
+#    echo "Need two point"
+#    exit 1
+#fi
+
+if [ $ALL_NUM -gt $TCP_ALL_NUM ];then
+    echo "TCP Socket is greater than $TCP_ALL_NUM(Now:$ALL_NUM)"
+    exit 2
+fi
+
+if [ $ESTAB_NUM -gt $TCP_ESTAB_NUM ];then
+    echo "TCP Socket status established number is greater than $TCP_ESTAB_NUM(Now:$ESTAB_NUM)"
+    exit 2
+fi
+
+echo "sys_tcp_all_conn_num:$ALL_NUM,established_conn_num:$ESTAB_NUM"
+exit 0

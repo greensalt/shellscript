@@ -1,0 +1,22 @@
+#!/bin/bash
+# The script is used for test remote server by NC command.
+# Jira: http://jira.transwiseway.com/browse/ZJYW-12470
+# By xielifeng On 2015-12-10
+
+IPADD="$1"
+PORT="$2"
+SERVICE="$3"
+NC_CMD=`which nc`
+
+[ -z "$NC_CMD" ] && echo "nc command is not exist." && exit 1
+[ -z "$IPADD" -o -z "$PORT" -o -z "$SERVICE" ] && echo "Usage: $0 IP Port Service." && exit 1
+[ $# != 3 ] && echo "Parameters must is three." && exit 1
+
+$NC_CMD -w 5 -z $IPADD $PORT > /dev/null 2>&1
+if [ $? != 0 ];then
+  echo "nc $IPADD:$PORT:$SERVICE is failed."
+  exit 2
+else
+  echo "nc $IPADD:$PORT:$SERVICE is ok."
+  exit 0
+fi

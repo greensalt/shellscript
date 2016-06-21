@@ -1,0 +1,38 @@
+#!/bin/bash
+# Jira: http://jira.transwiseway.com/browse/ITXTZC-31
+# AUTHER: xielifeng On 2015-09-25
+
+# 20分钟
+THRESHOLD_VAL="3600"
+NOW_TIME="`date +%s`"
+LOG_FILE="/logs/supp_app/MqttDataSave/dataTXT.log"
+PROCESS_NAME="MqttDataSave"
+USER_NAME="`whoami`"
+
+if [ $USER_NAME != "nagios" ];then
+    echo "Please use \"nagios\"."
+    exit 1
+fi
+
+[ ! -f $LOG_FILE ] && echo "\"$LOG_FILE\" is not exist." && exit
+
+## Get time diff
+MODIFY_TIME_HUMAN="`stat $LOG_FILE | grep 'Modify'|cut -d " " -f 2-3|awk -F'.' '{print $1}'`"
+MODIFY_TIME_SEC="`date -d "$MODIFY_TIME_HUMAN" +%s`"
+DIFF_TIME=$(($NOW_TIME-$MODIFY_TIME_SEC))
+
+## Get process return
+ps -ef|grep -v grep | grep "$PROCESS_NAME" > /dev/null 2>&1
+K=$?
+
+if [ $K -ne 0 ];then
+    echo "$PROCESS_NAME is down."
+    exit 2
+elif [ $DIFF_TIME -ge $THRESHOLD_VAL ];then
+    echo "\"$LOG_FILE\" for 60 minutes not updated."
+    exit 2
+else
+    echo "$PROCESS_NAME is ok."
+    echo "\"$LOG_FILE\" is ok."
+    exit 0
+fi

@@ -1,0 +1,184 @@
+#!/bin/bash
+
+## Paths to commands used in this script
+export PATH=$PATH:/usr/sbin:/usr/bin
+
+## Nagios return codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+
+## Plugin variable description
+PROGNAME=$(basename $0)
+PROGPATH=$(echo $0 | sed -e 's,[\\/][^\\/][^\\/]*$,,')
+VERSION="1.0"
+AUTHOR="On 2015-09-29 By xielifeng@sinoiov.com"
+
+## Globle env
+NOW_TIME="`date +%s`"
+USER_NAME="`whoami`"
+
+## Version
+print_version(){
+    echo $PROGNAME $VERSION $AUTHOR
+}
+
+##
+print_usage(){
+    echo "Usage: $PROGNAME -F|--filename </xxx/xxx.log> -T|--timeout <200>"
+    echo ""
+    echo "-H|--help       Get help."
+    echo "-V|--version    Get the script version."
+    echo "-F|--filename   Specify log file."
+    echo "--stime         Specify start time,used with --etime together,(H:M:S)."
+    echo "--etime         Specify end time,used with --stime together,(H:M:S)."
+    echo "-T|--timeout    Specify log file update timeout time (second)."
+    echo "--error-key     Specify error key,used with --row-num together."
+    echo "--ok-key        Specify right key,used with --row-num together."
+    echo "--row-num       Specify row number,used with --error-key or --ok-key together."
+    
+}
+
+## Get help
+print_help() {
+    echo ""
+    print_version
+    echo ""
+    print_usage
+    echo ""
+    exit $STATE_OK
+}
+
+## Grab the command line arguments
+while test -n "$1"; do
+    case "$1" in
+        -H | --help)
+            print_help
+            exit $STATE_OK
+        ;;
+        -V | --version)
+            print_version
+            exit $STATE_OK
+        ;;
+        -F | --filename)
+            shift
+            LOG_FILE=$1
+        ;;
+        --stime)
+            shift
+            # Ex: H:M:S
+            START_TIME=$1
+        ;;
+        --etime)
+            shift
+            # Ex: H:M:S
+            END_TIME=$1
+        ;;
+        -T | --timeout)
+            shift
+            # Log file update timeout time(second)
+            UPDATE_TIMEOUT=$1
+        ;;
+        --error-key)
+            shift
+            # Error key.
+            ERROR_KEY="$1"
+        ;;
+        --ok-key)
+            shift
+            # Rigth key.
+            OK_KEY="$1"
+        ;;
+        --row-num)
+            shift
+            ROW_NUM=$1
+        ;;
+        *)
+            print_usage
+            $STATE_UNKNOWN
+        ;;
+    esac
+    shift
+done
+
+## Not check
+not_check(){
+    S_TIME=`date -d "$START_TIME" +%s`
+    E_TIME=`date -d "$END_TIME" +%s`
+
+    if [ $NOW_TIME -gt $S_TIME -a $NOW_TIME -lt $E_TIME ];then
+        echo "The current time not check."
+        exit $STATE_OK
+    fi 
+}
+
+## Check log file
+check_log_file(){
+    echo "\"$LOG_FILE\" is not exist."
+    exit $STATE_CRITICAL
+}
+
+## Check log update
+check_update(){
+    ## Get time diff
+    MODIFY_TIME_HUMAN="`stat $LOG_FILE | grep 'Modify'|cut -d " " -f 2-3|awk -F'.' '{print $1}'`"
+    MODIFY_TIME_SEC="`date -d "$MODIFY_TIME_HUMAN" +%s`"
+    DIFF_TIME=$(($NOW_TIME-$MODIFY_TIME_SEC))
+    if [ $DIFF_TIME -ge $UPDATE_TIMEOUT ];then
+        echo "$LOG_FILE for $UPDATE_TIMEOUT second not updated."
+        exit $STATE_CRITICAL
+    fi
+}
+
+## Check error key
+check_error_key(){
+    KEY_VAL=`tail -n $ROW_NUM $LOG_FILE|grep "$ERROR_KEY"`
+    if [ -n "$KEY_VAL" ];then
+        echo "Error key \"$ERROR_KEY\" is exist."
+        exit $STATE_CRITICAL
+    else
+        echo "Error key \"$ERROR_KEY\" is not exist."
+        exit $STATE_OK
+    fi
+}
+
+## Check rigth key
+check_ok_key(){
+    KEY_VAL=`tail -n $ROW_NUM $LOG_FILE|grep -v "$OK_KEY"`
+    if [ -n "$KEY_VAL" ];then
+        echo "Right key \"$OK_KEY\" is exist."
+        exit $STATE_OK
+    else
+        echo "Right key \"$OK_KEY\" is not exist."
+        exit $STATE_CRITICAL
+    fi
+}
+
+## -----------------------------------------
+#                  Main
+## -----------------------------------------
+
+## Check username
+#if [ $USER_NAME -ne "nagios" -o $USER_NAME -ne "zabbix" ];then
+#    echo "Please use \"nagios\" or \"zabbix\"."
+#    exit $STATE_CRITICAL
+#fi
+
+## Check log file
+[ ! -f "$LOG_FILE" ] && check_log_file
+LOG_NAME=`basename $LOG_FILE`
+LOG_DIR=`dirname $LOG_FILE`
+TMP_FILE="/tmp/$LOG_NAME.tmp"
+[ ! -f $TMP_FILE ] && echo '0' > $TMP_FILE 
+
+## Check error key
+[ -n "$ERROR_KEY" ] && check_error_key
+## Check right key
+[ -n "$OK_KEY" ] && check_ok_key
+
+## Not check
+[ -n "$START_TIME" -a -n "$END_TIME" ] && not_check
+
+## Check log file update time
+[ -n $UPDATE_TIMEOUT ] && check_update

@@ -1,0 +1,90 @@
+#!/bin/bash
+
+#2013-07-05
+#savecenter_log monitor
+#writer:yangzhan
+
+#edit by xuyingwei
+#2013-09-20
+
+# Modify By xielifeng On 2015-12-10
+# Add: $LOG_KEY
+# Jira: http://jira.transwiseway.com/browse/ZJYW-12446
+
+LOG_PATH="/logs/supp_app"
+#LOG_FILE="/logs/supp_app/savecenter/SaveCenter.log /logs/supp_app/savecenter2/SaveCenter.log /logs/supp_app/savecenter3/SaveCenter.log"
+LOG_FILE=`find $LOG_PATH -maxdepth 1 -name savecenter*`
+LOG_NAME="SaveCenter.log"
+#LOG_ERROR="\[FATAL\] FileManager vPacket size :100000"
+LOG_ERROR="\[FATAL\] FileManager vPacket size :100000|java.lang.OutOfMemoryError"
+LOG_KEY="LastPosService-----monitoring run normal"
+
+TEMP_FILE="/tmp/.savecenter_err.tmep.nagios"
+/bin/true > $TEMP_FILE
+
+for SC_LOG in $LOG_FILE
+do 
+
+if [ -f "$SC_LOG/$LOG_NAME" ]
+then
+
+	SC_NAME=`ls $SC_LOG/$LOG_NAME |cut -d "/" -f4`
+	HIDE_FILE="/tmp/.$SC_NAME.temp"
+	if [ ! -f "$HIDE_FILE" ]
+	then
+        	echo "0" > $HIDE_FILE
+        	SAVECENT_LOG_ROW="0"
+	else
+        	SAVECENT_LOG_ROW=`cat $HIDE_FILE`
+        	[ -z "$SAVECENT_LOG_ROW" ] && SAVECENT_LOG_ROW="0"
+	fi
+
+        ALL_ROW=`wc -l $SC_LOG/$LOG_NAME|cut -d " " -f1`
+        if [ "$SAVECENT_LOG_ROW" -gt "$ALL_ROW" ]
+        then
+	ERROR_FIND=`awk -v A_END="$ALL_ROW" -v A_BEG="$SAVECENT_LOG_ROW" 'NR<A_END' "$SC_LOG/$LOG_NAME" |egrep "$LOG_ERROR"`
+        KEY_FIND=`awk -v A_END="$ALL_ROW" -v A_BEG="$SAVECENT_LOG_ROW" 'NR<A_END' "$SC_LOG/$LOG_NAME" |egrep "$LOG_KEY"`
+        echo "$ALL_ROW" > "$HIDE_FILE"
+                if [ -n "$ERROR_FIND" ]
+                then
+		       LAST_ERROR=`echo $ERROR_FIND|awk 'END{print}'|cut -c 1-100`
+                       echo "$SC_LOG/$LOG_NAME $LAST_ERROR" >> $TEMP_FILE
+                fi
+
+                if [ -z "$KEY_FIND" ]
+                then
+                       echo "$SC_LOG/$LOG_NAME KEY:\"$LOG_KEY\" is not exist." >> $TEMP_FILE
+                fi
+
+        elif [ "$SAVECENT_LOG_ROW" -lt "$ALL_ROW" ]
+        then
+	ERROR_FIND1=`awk -v A_END="$ALL_ROW" -v A_BEG="$SAVECENT_LOG_ROW" 'NR<=A_END&&NR>A_BEG' "$SC_LOG/$LOG_NAME" |egrep "$LOG_ERROR"`
+	KEY_FIND1=`awk -v A_END="$ALL_ROW" -v A_BEG="$SAVECENT_LOG_ROW" 'NR<=A_END&&NR>A_BEG' "$SC_LOG/$LOG_NAME" |egrep "$LOG_KEY"`
+        echo "$ALL_ROW" > "$HIDE_FILE"
+                if [ -n "$ERROR_FIND1" ]
+                then
+			LAST_ERROR=`echo $ERROR_FIND1|awk 'END{print}'|cut -c 1-100`
+			echo "$SC_LOG/$LOG_NAME $LAST_ERROR" >> $TEMP_FILE
+                fi
+
+                if [ -z "$KEY_FIND1" ]
+                then
+                       echo "$SC_LOG/$LOG_NAME KEY:\"$LOG_KEY\" is not exist." >> $TEMP_FILE
+                fi
+        fi
+
+else
+        echo "CRITICAL: $SC_LOG/$LOG_NAME file not exist"
+        exit 2
+fi
+
+done
+if [ -s "$TEMP_FILE" ]
+then
+	SEND_ERR=`cat $TEMP_FILE|awk 'END{print}'`
+	echo "CRITICAL:- $SEND_ERR"
+	exit 2
+else
+	echo "savecenter log ok"
+	exit 0
+fi

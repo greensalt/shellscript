@@ -1,0 +1,38 @@
+#!/bin/bash
+# Jira:http://jira.transwiseway.com/browse/ZJYW-12502
+# By xielifeng On 2015-12-22
+
+LOG_DIR="/opt/comm_app/lbs/log/ws"
+LOG_NAME="msg.log"
+LOG_FILE="$LOG_DIR/$LOG_NAME"
+VAR="1000"
+KEY="DISPATCH_FAILED"
+LIMIT="10"
+TMP_FILE="/tmp/$$.tmp"
+
+## Test File Exist:
+if [ ! -f "$LOG_FILE" ];then
+    echo "$LOG_FILE is not exist."
+    exit 1
+fi
+
+## Get Center:
+tail -n $VAR $LOG_FILE|grep "$KEY" >> $TMP_FILE
+ERR_ROW=`wc -l $TMP_FILE|awk '{print $1}'`
+if [ $ERR_ROW -eq 0 ];then
+    USER_ID_KEY="Null"
+else
+    USER_ID_KEY=`tail -1 $TMP_FILE|awk -F',' '{print $2}'|awk '{print $1}'`
+fi
+
+## Del Temp File:
+rm -f $TMP_FILE
+
+## Alert:
+if [ $ERR_ROW -gt $LIMIT ];then
+    echo "$LOG_FILE key(DISPATCH_FAILED) number is $ERR_ROW,USER_ID is $USER_ID_KEY."
+    exit 2
+else
+    echo "$LOG_FILE key(DISPATCH_FAILED) number is $ERR_ROW.USER_ID is $USER_ID_KEY."
+    exit 0
+fi

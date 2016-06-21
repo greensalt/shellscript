@@ -1,0 +1,35 @@
+#!/bin/bash
+# The script is used for get progress CPU USE RATE
+# By xielifeng On 2015-11-12
+# For dkpt
+
+ARG_NUM=$#
+# KEY:
+ARG1=$1
+# CPU USE RATE:
+ARG2=$2
+PROGNAME=$(basename $0)
+
+print_usage(){
+    echo "Usage: $PROGNAME KEY NUMBER"
+    echo "eg: $PROGNAME tomcat_rmApi_8083 80"
+    echo ""
+}
+
+[ $ARG_NUM -ne 2 ] && print_usage && exit 1
+
+# Progress:
+PROGRESS=`ps aux|grep $ARG1|grep -E -v "grep|vim|tail|$PROGNAME"`
+
+get_use_cpu(){
+    CPU_STAT=`echo "$PROGRESS"|awk '{print $3}'`
+    if [ $(echo "$CPU_STAT > $ARG2"|bc) -eq "1" ];then
+        echo "$ARG1 CPU USE RATE is ${CPU_STAT}%."
+        exit 2
+    else
+        echo "$ARG1 CPU USE RATE is ${CPU_STAT}%."
+        exit 0
+    fi
+}
+
+get_use_cpu

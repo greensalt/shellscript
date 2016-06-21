@@ -1,0 +1,119 @@
+#!/bin/bash
+# The pluin test redis server and client connect numbers.
+
+## Paths to commands used in this script
+export PATH=$PATH:/usr/sbin:/usr/bin:/opt/supp_app/ctfo-sharedcache/bin
+
+## Nagios return codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+
+## Redis ENV
+HOST="127.0.0.1"
+PORT="6379"
+REDIS_CMD="/usr/local/bin/redis-cli"
+
+## Plugin variable description
+PROGNAME=`basename $0`
+
+print_version(){
+    echo "Version: 1.0 By xielifeng On 2015.10.30"
+}
+
+print_usage(){
+    echo "Usage: $PROGNAME -H 127.0.0.1 -p 6379 -w 100 -c 200"
+    echo ""
+    echo "Options:"
+    echo " -h|--help       Get help."
+    echo " -V|--version    Get the script version."
+    echo " -H|--host       Specify redis host IP.Default:(127.0.0.1)."
+    echo " -p|--port       Specify redis port.Default:(6379)."
+    echo " -w|--warning    Response number of redis client connect to result in warning status(integer)."
+    echo " -c|--critical   Response number of redis client connect to result in critical status(integer)."
+}
+
+print_help(){
+    echo ""
+    print_version
+    echo ""
+    echo "The pluin test redis server and client connect numbers."
+    print_usage
+    echo ""
+    exit $STATE_OK
+}
+
+check_port(){
+    SS_CMD="/usr/sbin/ss"
+    if [ -x "$SS_CMD" ];then
+        $SS_CMD -lnt|grep -w "$PORT" > /dev/null 2>&1
+    else
+        netstat -lnt|grep -w "$PORT" > /dev/null 2>&1
+    fi
+    T=$?
+    if [ $T != "0" ];then
+        echo "Redis port:$PORT was down."
+        exit $STATE_CRITICAL
+    fi
+}
+
+check_client_connect_num(){
+    CONNECT_NUM=`$REDIS_CMD -h $HOST -p $PORT info|grep 'connected_clients:'|cut -d ":" -f 2|sed 's/\r//g'`
+
+    if [ -n "$CONNECT_CRITICAL" ];then
+        if [[ $CONNECT_NUM -gt $CONNECT_CRITICAL ]];then
+            echo "Redis:${PORT} client connect numbers is $CONNECT_NUM."
+            exit $STATE_CRITICAL
+        fi
+    fi
+
+    if [ -n "$CONNECT_WARNING" ];then
+        if [[ $CONNECT_NUM -gt $CONNECT_WARNING ]];then
+            echo "Redis:${PORT} client connect numbers is $CONNECT_NUM."
+            exit $STATE_CRITICAL
+        fi
+    fi
+
+    echo "Redis:${PORT} client connect numbers is $CONNECT_NUM."
+    exit $STATE_OK
+}
+
+# Get arguments
+while test -n "$1"; do
+    case "$1" in
+        -h | --help)
+            print_help
+            exit $STATE_OK
+        ;;
+        -V | --version)
+            print_version
+            exit $STATE_OK
+        ;;
+        -H | --host)
+            shift
+            HOST=$1
+        ;;
+        -p | --port)
+            shift
+            PORT=$1
+        ;;
+        -w | --warning)
+            shift
+            CONNECT_WARNING=$1
+        ;;
+        -c | --critical)
+            shift
+            CONNECT_CRITICAL=$1
+        ;;
+        *)
+            print_usage
+            exit $STATE_UNKNOWN
+        ;;
+    esac
+    shift
+done
+
+# Main
+check_port
+check_client_connect_num

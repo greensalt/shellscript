@@ -1,0 +1,83 @@
+#!/bin/bash
+# Jira: http://jira.transwiseway.com/browse/FXMTASK-3936
+# By xielifeng On 2016-06-12
+
+KEY1="QuequeMonitor"
+KEY2="Count number of every 10 seconds:"
+UPDATE_TIMEOUT="20"
+LOG_FILE="/logs/supp_app/rtuftServer/rtuftServer.log"
+COUNT_TMP_FILE="/tmp/.rtuftServerROW.tmp"
+VALUE_TMP_FILE="/tmp/.rtuftServer.tmp"
+
+[ ! -f "$COUNT_TMP_FILE" ] && echo 0 > $COUNT_TMP_FILE
+[ ! -f "$VALUE_TMP_FILE" ] && touch $VALUE_TMP_FILE
+
+## 检测日志20秒内是否有更新
+check_update(){
+    LOGF="$1"
+    TIMEO="$2"
+    ## Get time diff
+    MODIFY_TIME_HUMAN="`stat $LOGF | grep 'Modify'|cut -d " " -f 2-3|awk -F'.' '{print $1}'`"
+    MODIFY_TIME_SEC="`date -d "$MODIFY_TIME_HUMAN" +%s`"
+    DIFF_TIME=$(($NOW_TIME-$MODIFY_TIME_SEC))
+    if [ $DIFF_TIME -ge $TIMEO ];then
+        echo "$LOGF for $UPDATE_TIMEOUT second not updated."
+        exit 2
+    fi
+}
+
+## 检测'0'连续出现3次
+check_num(){
+    VAR="$1"
+    z=0
+    while read LINE
+    do
+        if [[ $LINE == 0 ]];then
+            z=$(($z+1))
+        else
+            z=1
+        fi
+
+        if [[ $z == 3 ]];then
+            echo "'0' continuous appeared 3 times."
+            exit 2
+        fi
+
+    done < $VAR
+}
+
+## 从上次读取的地方开始，获取文件内容
+check_file(){
+    ALL_ROW=`wc -l $LOG_FILE|awk '{print $1}'`
+    START_ROW=`cat $COUNT_TMP_FILE`
+    
+    if [[ $START_ROW < $ALL_ROW ]];then
+        awk -v S="$START_ROW" -v E="$ALL_ROW" 'NR>=S && NR<E' $LOG_FILE|grep "$KEY1"|grep "$KEY2"|awk -F '>*' '{print $2}'|awk -F ',' '{print $1}'|cut -d: -f2 > $VALUE_TMP_FILE
+        echo $ALL_ROW > $COUNT_TMP_FILE
+    elif [[ $START_ROW > $ALL_ROW ]];then
+        START_ROW="0"
+        awk -v S="$START_ROW" -v E="$ALL_ROW" 'NR>=S && NR<E' $LOG_FILE|grep "$KEY1"|grep "$KEY2"|awk -F '>*' '{print $2}'|awk -F ',' '{print $1}'|cut -d: -f2 > $VALUE_TMP_FILE
+        echo $ALL_ROW > $COUNT_TMP_FILE
+    else
+        echo "<$LOG_FILE> is not update."
+        exit 1
+    fi
+}
+
+# --------- Main ---------
+if [ ! -f "$LOG_FILE" ];then
+    echo "<$LOG_FILE> is not exist."
+    exit 2
+else
+    check_update "$LOG_FILE" "$UPDATE_TIMEOUT"
+    check_file
+fi
+
+## 判断是否连续3次为0
+if [ -s "$VALUE_TMP_FILE" ];then
+    check_update "$VALUE_TMP_FILE" "600"
+    check_num "$VALUE_TMP_FILE"
+fi
+
+echo "<$LOG_FILE> is ok."
+exit 0

@@ -1,0 +1,35 @@
+#!/bin/bash
+# Jira: http://jira.transwiseway.com/browse/ZJYW-12528
+# By xielifeng On 2016-01-18
+
+LOG_DIR="/opt/web_app/tomcat-service-goods-batch-8090/logs/goods-batch-service"
+LOG_NAME="trace.log"
+LOG_FILE="$LOG_DIR/$LOG_NAME"
+KEY="货源数据入库"
+ROW="$1"
+NOW_TIME=`date +%s`
+UPDATE_TIMEOUT="600"
+
+## Check log update
+check_update(){
+    ## Get time diff
+    MODIFY_TIME_HUMAN="`stat $LOG_FILE | grep 'Modify'|cut -d " " -f 2-3|awk -F'.' '{print $1}'`"
+    MODIFY_TIME_SEC="`date -d "$MODIFY_TIME_HUMAN" +%s`"
+    DIFF_TIME=$(($NOW_TIME-$MODIFY_TIME_SEC))
+    if [ $DIFF_TIME -ge $UPDATE_TIMEOUT ];then
+        echo "$LOG_FILE ${UPDATE_TIMEOUT}s not update."
+        exit 2
+    fi
+}
+
+[ ! -f "$LOG_FILE" ] && echo "$LOG_FILE is not exist." && exit 2
+check_update
+
+tail -n $ROW $LOG_DIR/$LOG_NAME|grep -w "$KEY" > /dev/null 2>&1
+R=$?
+
+if [ $R -ne 0 ];then
+    echo "$LOG_NAME key($KEY) not found."
+else
+    echo "$LOG_NAME is ok."
+fi

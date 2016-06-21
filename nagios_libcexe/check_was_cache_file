@@ -1,0 +1,23 @@
+#!/usr/bin/python2.6
+#coding:utf-8
+# Jira: http://jira.transwiseway.com/browse/ZJYW-12539
+# By xielifeng@sinoiov.com On 2015-12-18
+
+import os
+import sys
+
+WASPATH = "/opt/comm_app/lbs/cache/was/was_scmsg_cache"
+FILE_NUM = 2
+
+
+if not os.path.exists(WASPATH):
+    print WasPath + " is not exist."
+    sys.exit(2)
+
+fileList = os.listdir(WASPATH)
+if len(fileList) > FILE_NUM:
+    print "File number greater than %s:%s" % (FILE_NUM,(WASPATH + "/" + str(fileList)))
+    sys.exit(2)
+else:
+    print WASPATH + "/" + str(fileList)
+    sys.exit(0)

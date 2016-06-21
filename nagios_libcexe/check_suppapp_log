@@ -1,0 +1,51 @@
+#!/bin/bash
+# Jira: http://jira.transwiseway.com/browse/LHJHSERVER-69
+# By xielifeng On 2015-12-31
+
+HOST_BJ="10.50.40.53"
+HOST_GZ="10.250.40.78"
+UPDATE_TIMEOUT="900"
+NOW_TIME="`date +%s`"
+
+LOG_BJ="/opt/supp_app/dataexp/logs/info.log"
+LOG_GZ="/opt/supp_app/dataimp/logs/info.log"
+
+IP=`/sbin/ifconfig em2|grep 'inet addr:'|awk '{print $2}'|cut -d: -f 2`
+
+check_file_exist(){
+    FILE="$1"
+    if [ ! -f "$FILE" ];then
+        echo "$FILE is not exist."
+        exit 2
+    fi
+}
+
+## Check log update
+check_update(){
+    ## Get time diff
+    FILE="$1"
+    MODIFY_TIME_HUMAN="`stat $FILE | grep 'Modify'|cut -d " " -f 2-3|awk -F'.' '{print $1}'`"
+    MODIFY_TIME_SEC="`date -d "$MODIFY_TIME_HUMAN" +%s`"
+    DIFF_TIME=$(($NOW_TIME-$MODIFY_TIME_SEC))
+    if [ $DIFF_TIME -ge $UPDATE_TIMEOUT ];then
+        echo "$FILE for $UPDATE_TIMEOUT second not updated."
+        exit 2
+    fi      
+}    
+
+## ============ Main:
+if [ $IP == $HOST_BJ ];then
+    LOG_FILE="$LOG_BJ"
+    check_file_exist "$LOG_FILE"
+    check_update "$LOG_FILE"
+elif [ $IP == $HOST_GZ ];then
+    LOG_FILE="$LOG_GZ"
+    check_file_exist "$LOG_FILE"
+    check_update "$LOG_FILE"
+else
+    echo "Please Check Host IP."
+    exit 1
+fi
+
+echo "$LOG_FILE is ok."
+exit 0

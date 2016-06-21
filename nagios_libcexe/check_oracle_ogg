@@ -1,0 +1,57 @@
+#!/bin/bash
+# Jira: http://jira.transwiseway.com/browse/ZJYW-12784
+# By xielifeng On 2016-01-12
+
+SPATH=`cd $(dirname $0);pwd`
+PRO_FILE="$SPATH/.oracle_profile"
+TMP_FILE="/tmp/oggTMP.tmp"
+
+if [ -f "$PRO_FILE" ];then
+    source "$PRO_FILE"
+else
+    echo "$PRO_FILE is not exist."
+    exit 2
+fi
+
+OGG_DATA=`$GG_HOME/ggsci <<EOF
+info all
+EOF`
+
+TMP_DATA=`echo "$OGG_DATA"|grep -v -E "GGSCI|GoldenGate|Version|Linux|Copyright|MANAGER|Program"|sed '/^$/d'|tr -s ' '`
+echo "$TMP_DATA" > $TMP_FILE
+
+ERROR_CONTENT=""
+while read LINE
+do
+    PROGRAM=`echo $LINE|awk '{print $1}'`
+    RUN_STATUS=`echo $LINE|awk '{print $2}'`
+    GROUP=`echo $LINE|awk '{print $3}'`
+    LAG_AT_CHKPT=`echo $LINE|awk '{print $4}'`
+    TIME_SINCE_CHKPT=`echo $LINE|awk '{print $5}'`
+
+    HOUR=`echo $LAG_AT_CHKPT|awk -F":" '{print $1}'`
+    MINUTE=`echo $LAG_AT_CHKPT|awk -F":" '{print $2}'`
+
+    ERR_CONTENT="${PROGRAM}_${RUN_STATUS}_${GROUP}_${LAG_AT_CHKPT}"
+
+    if [ $RUN_STATUS == "RUNNING" ];then
+        if [ $HOUR -gt 00 -o $MINUTE -gt 00 ];then
+            ERROR_CONTENT="$ERR_CONTENT $ERROR_CONTENT"
+            continue
+        fi
+    fi
+
+    if [ $RUN_STATUS == "ABENDED" ];then
+        ERROR_CONTENT="$ERR_CONTENT $ERROR_CONTENT"
+        continue
+    fi
+    
+done < $TMP_FILE
+
+if [ -n "$ERROR_CONTENT" ];then
+    echo "$ERROR_CONTENT"
+    exit 2
+else
+    echo "Ogg ok."
+    exit 0
+fi

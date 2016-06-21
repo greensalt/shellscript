@@ -1,0 +1,56 @@
+#!/bin/bash
+# The script is used for check system process MEMORY USE RATE.
+# By xielifeng On 2016-02-23
+
+PROGNAME=$(basename $0)
+# Number of process:
+PRO_NUM="5"
+# Threshold
+MEM_VAR="$1"
+
+[ $# -ne 1 ] && echo "Need one option." && exit 1
+
+# 
+
+## `ps auxw` output format:
+# """
+# USER        PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+# root          1  0.0  0.0  19232  1508 ?        Ss   Oct23   0:05 /sbin/init
+# """
+
+# Temp file
+ALART_TMP_FILE="/tmp/${PROGNAME}_alert.tmp"
+[ ! -f $ALART_TMP_FILE ] && touch $ALART_TMP_FILE
+/bin/true > $ALART_TMP_FILE
+
+TMP_MEM_FILE="/tmp/${PROGNAME}_mem.tmp"
+[ ! -f $TMP_MEM_FILE ] && touch $TMP_MEM_FILE
+/bin/true > $TMP_MEM_FILE
+
+# Get ps countent
+ps auxw --sort=%mem|tail -n $PRO_NUM > $TMP_MEM_FILE
+
+while read LINE
+do
+    MEM_VALUE=`echo "$LINE"|awk '{print $4}'`
+    PID=`echo "$LINE"|awk '{print $2}'`
+    USER=`echo "$LINE"|awk '{print $1}'`
+    COMMAND=`echo "$LINE"|awk '{print $11,$12}'`
+    
+    if [ $(echo "$MEM_VALUE > $MEM_VAR"|bc) -eq 1 ];then
+      echo "Process mem_use_rate high.USER:$USER PID:$PID MEMORY:$MEM_VALUE% CMD:$COMMAND" >> $ALART_TMP_FILE
+    fi
+done < $TMP_MEM_FILE
+
+if [ -s "$ALART_TMP_FILE" ];then
+    ALERT_COUNTENT=`cat $ALART_TMP_FILE`
+    echo "$ALERT_COUNTENT"
+    exit 2
+else
+    USER_HIGHEST=`tail -1 $TMP_MEM_FILE|awk '{print $1}'`
+    MEM_HIGHEST=`tail -1 $TMP_MEM_FILE|awk '{print $4}'`
+    PID_HIGHEST=`tail -1 $TMP_MEM_FILE|awk '{print $2}'`
+    COMMAND_HIGHEST=`tail -1 $TMP_MEM_FILE|awk '{print $11,$12}'`
+    echo "All process mem_use_rate is ok.And mem_use_rate highest USER:$USER_HIGHEST PID:$PID_HIGHEST MEMORY:$MEM_HIGHEST% CMD:$COMMAND_HIGHEST"
+    exit 0
+fi

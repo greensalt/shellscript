@@ -1,0 +1,40 @@
+#!/bin/bash
+# Jira: http://jira.transwiseway.com/browse/ZJYW-13138
+# By xielifeng On 2016-02-24
+
+SERVICES[0]="tomcat_api_8080"
+SERVICES[1]="tomcat_api_8091"
+LOG_PATH="/logs/web_app"
+LOG_NAME="AppService.log"
+
+## 毫秒
+LIMIT="$1"
+KEY="IMGroupAction findGroupList costTime"
+ROW="1000"
+
+for SERVICE in ${SERVICES[@]}
+do
+    SUM="0"
+    TMP_FILE="/tmp/${SERVICE}.tmp"
+    [ ! -f "$TMP_FILE" ] && touch $TMP_FILE
+    tail -n $ROW "$LOG_PATH/$SERVICE/$LOG_NAME"|grep "$KEY" > $TMP_FILE
+
+    if [ -s "$TMP_FILE" ];then
+        while read LINE
+        do
+            MS=`echo "$LINE"|awk -F "," '{print $1}'|awk -F ":" '{print $NF}'`
+
+            if [ $MS -gt $LIMIT ];then
+                SUM=$(($SUM+1))
+            fi
+        done < $TMP_FILE
+    fi
+
+    if [ $SUM != "0" ] ;then
+        echo "$SERVICE/$LOG_NAME key(findGroupList) greater than ${LIMIT}ms $SUM times."
+        exit 2
+    fi
+    
+done
+
+echo "\"${SERVICES[@]}\" $LOG_NAME is ok."

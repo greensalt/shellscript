@@ -1,0 +1,59 @@
+#!/bin/bash
+# Jira: http://jira.transwiseway.com/browse/ZJYW-13138
+# By xielifeng On 2016-02-23
+
+PROGNAME=$(basename $0)
+SERVICE="tomcat_sdrive-offline-calc-service_8080"
+LOG_FILE="/opt/web_app/${SERVICE}/logs/sdriveOfflineCalcService/error.log"
+KEY="sdrive-offline-calc-service:could not find vims file error!"
+HOUR=`date +%H`
+MINUTE=`date +%M`
+PROGRESS=`ps aux|grep "$SERVICE"|grep -E -v "grep|vim|tail|$PROGNAME"`
+
+## Memory limit:
+ARG="$1"
+[ -z "$ARG" ] && echo "Need one option." && exit 2
+
+## Check log file
+check_log_file(){
+    if [ ! -f "$LOG_FILE" ];then
+        echo "\"$LOG_FILE\" is not exist."
+        exit 2
+    fi
+}
+
+## Check error key
+check_key(){
+    KEY_NUM=`grep -c "$KEY" $LOG_FILE`
+    if [ $KEY_NUM != 0 ];then
+        echo "$KEY"
+        exit 2
+    fi
+}
+
+## Check progress use memory
+get_use_mem(){
+    if [ -z "$PROGRESS" ];then
+        MEM_STAT="0.0"
+        echo "$SERVICE in not running."
+        exit 2
+    else
+        MEM_STAT=`echo "$PROGRESS"|awk '{print $4}'`
+    fi
+
+    if [ $(echo "$MEM_STAT > $ARG"|bc) -eq "1" ];then
+        echo "$SERVICE Memory use rate is ${MEM_STAT}%."
+        exit 2
+    else
+        echo "$SERVICE Memory use rate is ${MEM_STAT}%."
+        exit 0
+    fi
+}
+
+## ============ Main:
+check_log_file
+# Everyday only need test key one time.
+if [ $HOUR -eq 03 -a $MINUTE -lt 10 ];then
+    check_key
+fi
+get_use_mem

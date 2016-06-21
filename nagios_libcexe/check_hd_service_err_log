@@ -1,0 +1,28 @@
+#!/bin/bash
+# Jira: http://jira.transwiseway.com/browse/ZJYW-13250
+# By xielifeng On 2016-03-07
+
+SERVICE="tomcat_hd_service_8081"
+LOG_DIR="/opt/web_app/$SERVICE/logs/hdService"
+LOG_NAME="error.log"
+LOG_FILE="$LOG_DIR/$LOG_NAME"
+
+[ ! -f "$LOG_FILE" ] && echo "$SERVICE $LOG_NAME is not exist." && exit 0
+
+ROW="$1"
+
+KEYS[0]="hd-service:read big data file error!"
+KEYS[1]="hd-service:query all daka users error!"
+KEYS[2]="hd-service:calc process error!"
+
+for KEY in "${KEYS[@]}"
+do
+    tail -n $ROW $LOG_FILE | grep "$KEY" > /dev/null 2>&1
+    if [ $? == 0 ];then
+        echo "$SERVICE $LOG_NAME get KEY($KEY)."
+        exit 2
+    fi
+done
+
+echo "$SERVICE $LOG_NAME is OK."
+exit 0

@@ -1,0 +1,38 @@
+#!/bin/bash
+# Test tomcat service's log 'OutOfMemoryError'
+# By xielifeng On 2015-11-25
+# Needer: ailinlin@sinoiov.com
+
+PROGNAME=$(basename $0)
+SERVICE_DIR="/opt/web_app"
+LOG_FILE_NAME="catalina.out"
+LOG_DIR_NAME="logs"
+KEY="OutOfMemoryError"
+TMP_FILE="/tmp/$PROGNAME.tmp"
+[ ! -f $TMP_FILE ] && touch $TMP_FILE
+/bin/true > $TMP_FILE
+
+# For. Get error key.
+for TOMCAT_ROOT in `ls $SERVICE_DIR|grep -v -E "tomcat_6.0|tomcat_7.0"|grep "tomcat"`
+do
+    LOG_FILE="$SERVICE_DIR/$TOMCAT_ROOT/$LOG_DIR_NAME/$LOG_FILE_NAME"
+    if [ ! -f $LOG_FILE ];then
+        echo "$LOG_FILE is not exist" >> $TMP_FILE
+        continue
+    fi
+
+    tail -n 20 $LOG_FILE|grep "$KEY" > /dev/null 2>&1
+    if [ $? -eq 0 ];then
+        echo "$TOMCAT_ROOT is $KEY" >> $TMP_FILE
+    fi
+done
+
+# Alert.
+if [ -s $TMP_FILE ];then
+    ALERT_CONTENT=`cat $TMP_FILE`
+    echo $ALERT_CONTENT
+    exit 2
+else
+    echo "All tomcat service's log is ok."
+    exit 0
+fi

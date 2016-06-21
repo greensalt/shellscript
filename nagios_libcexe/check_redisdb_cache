@@ -1,0 +1,37 @@
+#!/bin/bash
+# Jira: http://jira.transwiseway.com/browse/LHJHSERVER-69
+# By xielifeng On 2016-01-01
+
+DIR_1="/opt/supp_app/redis_3.0/bak"
+DIR_2="/opt/supp_app/ctfo-sharedcache/bak"
+YEAR=`date +%Y`
+MOUNTH=`date +%m`
+DAY=`date +%d`
+NOW_TIME="`date +%s`"
+VAL="300"
+HOST0="10.250.40.76"
+HOST1="10.250.40.72"
+
+IP=`/sbin/ifconfig em2|grep 'inet addr:'|awk '{print $2}'|cut -d: -f 2`
+
+if [ $IP == $HOST0 ];then
+    FILE_DIR="$DIR_1/${YEAR}${MOUNTH}${DAY}"
+elif [ $IP == $HOST1 ];then
+    FILE_DIR="$DIR_2/${YEAR}${MOUNTH}${DAY}"
+else
+    echo "Please Check Host IP."
+    exit 1
+fi
+
+NEWEST_FILE=`ls -t $FILE_DIR | head -1`
+CREATE_TIME="`stat $FILE_DIR/$NEWEST_FILE | grep 'Modify'|cut -d ' ' -f 2-3|awk -F'.' '{print $1}'`"
+CREATE_TIME_SECOND=`date -d "$CREATE_TIME" +%s`
+DIFF_TIME=$(($NOW_TIME-$CREATE_TIME_SECOND))
+
+if [ $DIFF_TIME -gt $VAL ];then
+    echo "$FILE_DIR ${VAL}seconds have not new file."
+    exit 2
+else
+    echo "$FILE_DIR ${VAL}seconds have new file."
+    exit 0
+fi
