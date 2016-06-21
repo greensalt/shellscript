@@ -15,7 +15,7 @@ FRIGGA_CMD="/opt/ops/Frigga/bin/frigga.rb"
 FRIGGA_BIN_DIR=`dirname $FRIGGA_CMD`
 
 ADMIN="adminops"
-PASSWD="zjxl@11Y30R2015Y"
+PASSWD="123456"
 PORT="5555"
 
 REBOOT_RUN="/etc/rc.local"
