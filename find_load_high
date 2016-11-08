@@ -1,0 +1,78 @@
+#!/bin/bash
+# By xielifeng On 2015-11-18
+
+SPATH=`cd $(dirname $0);pwd`
+PROGNAME=$(basename $0)
+TODAY=`date +%F`
+TODAY_DAY=`date +%d`
+YESTORDAY=`date +%F -d 'yesterday'`
+NOW_TIME=`date +%T`
+TODAY_DAY_TMP="$SPATH/tmp/day_time.tmp"
+
+[ ! -d $SPATH/logs ] && mkdir $SPATH/logs
+[ ! -d $SPATH/tmp ] && mkdir $SPATH/tmp
+[ ! -f $TODAY_DAY_TMP ] && echo "$TODAY_DAY" > $TODAY_DAY_TMP
+
+## Get local ip
+get_ip(){
+  IP=`/sbin/ifconfig |grep "inet addr:"|grep -v "127.0.0.1"|awk '{print $2}'|cut -d : -f 2|head -1`
+  IP_END=`echo $IP|awk -F "." '{print $(NF-1)"."$NF}'`
+  echo $IP_END
+}
+
+LOG_FILE="$SPATH/logs/${PROGNAME}_`get_ip`.log"
+[ ! -f $LOG_FILE ] && touch $LOG_FILE
+
+test_cmd(){
+  which iotop > /dev/null 2>&1
+  if [ $? -ne 0 ];then
+    yum -y install iotop
+  fi
+}
+
+write_log(){
+  echo "--------------------------------- $NOW_TIME -----------------------------" >> $LOG_FILE
+  
+}
+
+# ps auxw --sort=%cpu  ## Reverse order
+# USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+# root         2  0.0  0.0      0     0 ?        S<   Nov11   0:00 [migration/0]
+# root         3  0.0  0.0      0     0 ?        SN   Nov11   0:00 [ksoftirqd/0]
+
+sort_cpu(){
+  echo "## cpu sort:" >> $LOG_FILE
+  echo "USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND" >> $LOG_FILE
+  ps auxw --sort=%cpu|tail -n 10 >> $LOG_FILE
+  echo "" >> $LOG_FILE
+}
+
+sort_mem(){
+  echo "## mem sort:" >> $LOG_FILE
+  echo "USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND" >> $LOG_FILE
+  ps auxw --sort=%mem|tail -n 10 >> $LOG_FILE
+  echo "" >> $LOG_FILE
+}
+
+get_pro_io(){
+  echo "## io:" >> $LOG_FILE
+  /usr/bin/iotop -o -b -n 3 >> $LOG_FILE
+  echo "" >> $LOG_FILE
+}
+
+cut_log(){
+  mv $LOG_FILE ${LOG_FILE}.${YESTORDAY}
+  find $SPATH/logs -atime +60 -exec rm -f {} \;
+}
+
+test_cmd
+write_log
+sort_cpu
+sort_mem
+get_pro_io
+
+
+if [ `cat $TODAY_DAY_TMP` != $TODAY_DAY ];then
+  cut_log
+  echo $TODAY_DAY > $TODAY_DAY_TMP
+fi
