@@ -2,20 +2,17 @@
 # By xielifeng On 2016-02-15 
 
 SECOND=10
-NETWORK=`/sbin/ifconfig|grep -Ev "^ |lo"|awk '{print $1}'|tr -s '\n'`
+NETWORK=`/sbin/ifconfig|grep -Ev "^ |lo"|awk '{print $1}'|tr -s '\n'|cut -d : -f 1|sort|uniq`
 
 while :
 do
     for i in $NETWORK
     do
-        if [ $i == "bond0" ];then
-            :
-        else    
-            IP=`/sbin/ifconfig $i | sed -n '/inet /{s/.*addr://;s/ .*//;p}'`
-            if [ -z "$IP" ];then
-                break
-            fi
+        IP=`/sbin/ifconfig $i|awk '/inet /{print $2}'|awk -F ':' '{print $NF}'`
+        if [ -z "$IP" ];then
+            continue
         fi
+
         rx_before=`/sbin/ifconfig $i|grep "RX bytes"|awk '{print $2}'|cut -c7-`
         tx_before=`/sbin/ifconfig $i|grep "RX bytes"|awk '{print $6}'|cut -c7-`
         sleep $SECOND
