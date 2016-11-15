@@ -1,4 +1,5 @@
 #!/bin/bash
+# Support CentOS5.x,6.x,7.x
 # By xielifeng On 2016-02-15 
 
 SECOND=10
