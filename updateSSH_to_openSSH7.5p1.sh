@@ -8,8 +8,7 @@ BAK_SSH_DIR="/etc/ssh_bak"
 SOFT_DIR="/opt/soft"
 NEW_SSH="openssh-7.5p1"
 
-SSHD_SERVICE_7="""
-[Unit]
+SSHD_SERVICE_7="""[Unit]
 Description=OpenSSH server daemon
 Documentation=man:sshd(8) man:sshd_config(5)
 After=network.target sshd-keygen.service
