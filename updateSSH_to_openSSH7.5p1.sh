@@ -104,6 +104,7 @@ update_ssh(){
     else
         cp contrib/redhat/sshd.init /etc/init.d/sshd
         chkconfig --level 2345 sshd on
+        /etc/init.d/sshd start
     fi
 }
 
