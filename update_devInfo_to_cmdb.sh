@@ -1,6 +1,6 @@
 #!/bin/bash
 # The script is used for Get HOST Info
-# By xielifeng On 2016-07-04
+# By L.F.Xie On 2016-07-04
 
 ## RMDB Info
 RMDB_URL_INSIDE="172.0.4.5"
