@@ -32,12 +32,12 @@ set_sudo(){
         check_result "$SUDO_CONFIG add 'Defaults !requiretty'\n`grep '^Defaults    !requiretty' $SUDO_CONFIG`"
     fi
 
-    grep "^zjxl_ops" $SUDO_CONFIG > /dev/null 2>&1
+    grep "^testUser" $SUDO_CONFIG > /dev/null 2>&1
     if [[ $? != 0 ]];then
-        echo 'zjxl_ops ALL=(ALL)      NOPASSWD: ALL' >> $SUDO_CONFIG
-        check_result "'zjxl_ops ALL=(ALL)      NOPASSWD: ALL' to $SUDO_CONFIG\n`cat $SUDO_CONFIG|grep ^zjxl_ops`"
+        echo 'testUser ALL=(ALL)      NOPASSWD: ALL' >> $SUDO_CONFIG
+        check_result "'testUser ALL=(ALL)      NOPASSWD: ALL' to $SUDO_CONFIG\n`cat $SUDO_CONFIG|grep ^testUser`"
     else
-        write_log "$SUDO_CONFIG was added zjxl_ops\n`cat $SUDO_CONFIG|grep "^zjxl_ops"`"
+        write_log "$SUDO_CONFIG was added testUser\n`cat $SUDO_CONFIG|grep "^testUser"`"
     fi
 }
 
@@ -98,16 +98,16 @@ add_sys_user(){
 }
 
 login_no_passwd(){
-    PUB_CA_FILE="${SPATH}/zjxl_ops.pub"
+    PUB_CA_FILE="${SPATH}/testUser.pub"
 
-    ## Set user: zjxl_ops
+    ## Set user: testUser
     if [ -f "$PUB_CA_FILE" ];then
-        mkdir -p /home/zjxl_ops/.ssh/
-        cp -f $PUB_CA_FILE /home/zjxl_ops/.ssh/authorized_keys
-        chmod 700 /home/zjxl_ops/.ssh
-        chmod 600 /home/zjxl_ops/.ssh/authorized_keys
-        chown zjxl_ops:zjxl_ops /home/zjxl_ops/ -R
-        check_result "'zjxl_ops' user set no passwd"
+        mkdir -p /home/testUser/.ssh/
+        cp -f $PUB_CA_FILE /home/testUser/.ssh/authorized_keys
+        chmod 700 /home/testUser/.ssh
+        chmod 600 /home/testUser/.ssh/authorized_keys
+        chown testUser:testUser /home/testUser/ -R
+        check_result "'testUser' user set no passwd"
     else
         write_log "[ Error ] $PUB_CA_FILE is not exist."
         exit 2
