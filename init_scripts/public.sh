@@ -23,9 +23,9 @@ ALERT_PT="INIT"
 [ ! -f "$SERVICE_TMP" ] && touch $SERVICE_TMP
 
 ## RMDB Url
-RMDB_URL_INSIDE="172.90.4.55"
+RMDB_URL_INSIDE="172.0.4.55"
 RMDB_INSIDE_PORT="8000"
-RMDB_RUL_OUTSIDE="rmdb.transwiseway.com"
+RMDB_RUL_OUTSIDE="rmdb.test.com"
 RMDB_OUTSIDE_PORT="443"
 
 ## System config file
@@ -42,11 +42,11 @@ create_dirs(){
     mkdir -p /opt/tasks/monitor/ganglia
 }
 
-## Add lbs permissions
+## Add lbss permissions
 add_permission(){
     
-    chown -R lbs:lbs /opt/{supp_app,web_app,comm_app}
-    chown -R lbs:lbs /logs/{supp_app,web_app,comm_app}
+    chown -R lbss:lbss /opt/{supp_app,web_app,comm_app}
+    chown -R lbss:lbss /logs/{supp_app,web_app,comm_app}
 }
 
 ## Backup config
@@ -149,11 +149,11 @@ write_log(){
 ## Alert
 alert(){
     MSG_BODY="$1"
-    USERNAME="nagios"
-    PASSWORD="nagios"
-    INSIDE_IP='172.90.4.54'
-    OUTSIDE_DM='owl.transwiseway.com'
-    PORT="8889"
+    USERNAME="ntest"
+    PASSWORD="ntest"
+    INSIDE_IP='172.0.4.54'
+    OUTSIDE_DM='owl.test.com'
+    PORT="8089"
     if nc -w 2 -z $INSIDE_IP $PORT;then
         ALERT_SMS_URL="http://$INSIDE_IP:$PORT/mail_sms/sms.php"
     else
@@ -220,8 +220,8 @@ check_result(){
 ## Download Software Package
 down_url(){
     #URL_IPS=(192.168.111.111 192.168.112.151)
-    URL_IP="192.168.112.110"
-    URL_OUT="113.14.33.35"
+    URL_IP="192.168.12.110"
+    URL_OUT="113.14.33.5"
     PORT_OUT="8000"
     DOWN_URL=""
     DOWN_URL_ARG="download_center/software"
