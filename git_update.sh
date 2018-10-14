@@ -1,11 +1,14 @@
 #!/bin/bash
+# By L.F.Xie On 2016-11-12
 
 SPATH=`cd $(dirname $0);pwd`
 C_GREEN_S="\033[32;49;1m"
 C_GREEN_E="\033[39;49;0m"
 C_RED_S="\033[32;31;1m"
 C_RED_E="\033[39;31;0m"
-MY_SELF_GIT="xielifeng"
+# 此处填写自己的git 分支名字：
+MY_SELF_GIT="git_Repo"
+
 NOW_TIME=`date +"%F %T"`
 
 FILE=$1
