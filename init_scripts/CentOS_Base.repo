@@ -1,16 +1,16 @@
-[ZJXL-init]
+[Test-init]
 name=CentOS-$releasever-init
 baseurl=http://mirrors.test.com.cn/mirrors/centos/$releasever/$basearch/init
 enabled=1
 gpgcheck=0
 
-[ZJXL-service]
+[Test-service]
 name=CentOS-$releasever-service
 baseurl=http://mirrors.test.com.cn/mirrors/centos/$releasever/$basearch/service
 enabled=1
 gpgcheck=0
 
-[ZJXL-base]
+[Test-base]
 name=CentOS-$releasever-base
 baseurl=http://mirrors.test.com.cn/mirrors/centos/$releasever/$basearch/base
 enabled=1
@@ -22,13 +22,13 @@ baseurl=http://mirrors.test.com.cn/mirrors/centos/$releasever/$basearch/dellomsa
 enabled=1
 gpgcheck=0
 
-[ZJXL-saltstack]
+[Test-saltstack]
 name=CentOS-$releasever-saltstack
 baseurl=http://mirrors.test.com.cn/mirrors/centos/$releasever/$basearch/saltstack
 enabled=1
 gpgcheck=0
 
-[ZJXL-os]
+[Test-os]
 name=CentOS-$releasever-os
 baseurl=http://mirrors.test.com.cn/mirrors/centos/$releasever/$basearch/os
 gpgcheck=0
