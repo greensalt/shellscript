@@ -1,0 +1,19 @@
+- 该初始化程序，目前支持CentOS 6/7 系统
+
+start_init.sh
+    初始化主程序，一切将从这里开始
+
+.sys_user_passwd
+    该文件中的密码不要使用感叹号"!"，会导致错误，感叹号是特殊字符！！！
+
+sysctl6
+    该文件为系统参数文件，初始化时会将该文件中的参数更新到系统的/etc/sysctl.conf文件中
+
+zjxl_ops.pub
+    zjxl_ops免密登陆
+
+ntpdate.sh
+    该文件实际是会被复制到/etc/cron.hourly/，保证所有服务器时间一致
+
+accounts.cfg
+    接收通知人名单
