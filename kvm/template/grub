@@ -1,0 +1,9 @@
+GRUB_TIMEOUT=5
+GRUB_DISTRIBUTOR="$(sed 's, release .*$,,g' /etc/system-release)"
+GRUB_DEFAULT=saved
+GRUB_DISABLE_SUBMENU=true
+GRUB_TERMINAL_OUTPUT="console"
+GRUB_CMDLINE_LINUX="crashkernel=128M selinux=0 ipv6.disable=1 intel_pstate=disable console=tty0 console=ttyS0,19200"
+GRUB_DISABLE_RECOVERY="true"
+GRUB_TERMINAL="serial console"
+GRUB_SERIAL_COMMAND="serial --speed=19200 --unit=1 --word=8 --parity=no --stop=1"
